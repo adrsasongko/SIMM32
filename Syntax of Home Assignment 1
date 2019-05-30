@@ -1,6 +1,6 @@
 * Encoding: UTF-8.
 *RQ1.
-*SYNTAX FOR THE DATASET 1.
+*SYNTAX FOR THE DATASET home_assignment_data_1.
 
 *I recode for sex (with male as reference). Note that it is important to set the values in the variable view (0 = male, 1 = female) for the ease of interpretation.
 RECODE sex ('female'=1) ('male'=0) INTO sex_recode.
