@@ -1,0 +1,378 @@
+* Encoding: UTF-8.
+*RQ1.
+*SYNTAX FOR THE DATASET 1.
+
+*I recode for sex (with male as reference). Note that it is important to set the values in the variable view (0 = male, 1 = female) for the ease of interpretation.
+RECODE sex ('female'=1) ('male'=0) INTO sex_recode.
+VARIABLE LABELS  sex_recode.
+EXECUTE.
+
+*I check the frequency tables of all variables to see whether there is extreme values. 
+FREQUENCIES VARIABLES=pain age sex_recode STAI_trait pain_cat mindfulness cortisol_serum 
+    cortisol_saliva
+  /ORDER=ANALYSIS.
+
+*I check the descriptive statictics as well.
+DESCRIPTIVES VARIABLES=pain age sex_recode STAI_trait pain_cat mindfulness cortisol_serum 
+    cortisol_saliva
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+*After I run frequency, descriptive, and explore statistics, I notice that there is extreme value of 222 in age variable
+I assumed that the person misstyped it from 22, thus I corrected the value then. 
+
+RECODE age (222=22) (ELSE=Copy) INTO age_recode.
+EXECUTE.
+
+*I look at the overall predictors. The distribution of data.
+EXAMINE VARIABLES=pain age_recode STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva
+  /PLOT BOXPLOT HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+
+*First thing to do is build the more complex model to include all of the variables (the 'more complex model').
+*This part is important before I start the model diagnostics.
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA CHANGE TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID)
+  /SAVE PRED COOK RESID.
+
+*MODEL DIAGNOSTICS.
+* Chart Builder (cook distance).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=ID COO_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: ID=col(source(s), name("ID"), unit.category())
+  DATA: COO_1=col(source(s), name("COO_1"))
+  GUIDE: axis(dim(1), label("ID"))
+  GUIDE: axis(dim(2), label("Cook's Distance"))
+  SCALE: linear(dim(2), include(0))
+  ELEMENT: point(position(ID*COO_1))
+END GPL.
+
+*NORMALITY ASSUMPTION TESTING.
+EXAMINE VARIABLES=RES_1
+  /PLOT BOXPLOT HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+
+*As I can see that the case 33 is considered to has the highest
+cook's distance compared to other cases as well as showed up as the biggest outliers on the box-plot of the
+unstandardized residuals in the explore output. Hence I tried to exclude the case.
+
+RECODE ID ('ID_33'=0) (ELSE=1) INTO excluding_variable.
+EXECUTE.
+
+USE ALL.
+FILTER BY excluding_variable.
+EXECUTE.
+
+*I run the regression again. 
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA CHANGE TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode 
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID)
+  /SAVE PRED RESID.
+
+EXAMINE VARIABLES=RES_2
+  /PLOT BOXPLOT HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+
+* Bootstrapping to get a more robust estimation of Confidence Interval.
+BOOTSTRAP
+  /SAMPLING METHOD=SIMPLE
+  /VARIABLES TARGET=pain INPUT=  age_recode sex_recode STAI_trait pain_cat mindfulness cortisol_serum 
+    cortisol_saliva  
+  /CRITERIA CILEVEL=95 CITYPE=PERCENTILE  NSAMPLES=1000
+  /MISSING USERMISSING=EXCLUDE.
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA TOL
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID).
+
+*LINEARITY ASSUMPTION TESTING..
+* Chart Builder (pain & age).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=age_recode pain MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: age_recode=col(source(s), name("age_recode"))
+  DATA: pain=col(source(s), name("pain"))
+  GUIDE: axis(dim(1), label("age"))
+  GUIDE: axis(dim(2), label("pain"))
+  ELEMENT: point(position(age_recode*pain))
+  ELEMENT: point(position(smooth.loess(age_recode*pain)))
+END GPL.
+
+* Chart Builder (pain & STAI).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=STAI_trait pain MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: STAI_trait=col(source(s), name("STAI_trait"))
+  DATA: pain=col(source(s), name("pain"))
+  GUIDE: axis(dim(1), label("STAI_trait"))
+  GUIDE: axis(dim(2), label("pain"))
+  ELEMENT: point(position(STAI_trait*pain))
+  ELEMENT: point(position(smooth.loess(STAI_trait*pain)))
+END GPL.
+
+* Chart Builder (pain & pain CAT).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=pain_cat pain MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: pain_cat=col(source(s), name("pain_cat"))
+  DATA: pain=col(source(s), name("pain"))
+  GUIDE: axis(dim(1), label("pain_cat"))
+  GUIDE: axis(dim(2), label("pain"))
+  ELEMENT: point(position(pain_cat*pain))
+  ELEMENT: point(position(smooth.loess(pain_cat*pain)))
+END GPL.
+
+* Chart Builder (pain & mindfulness).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=mindfulness pain MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: mindfulness=col(source(s), name("mindfulness"))
+  DATA: pain=col(source(s), name("pain"))
+  GUIDE: axis(dim(1), label("mindfulness"))
+  GUIDE: axis(dim(2), label("pain"))
+  ELEMENT: point(position(mindfulness*pain))
+  ELEMENT: point(position(smooth.loess(mindfulness*pain)))
+END GPL.
+
+* Chart Builder (pain & control serum).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=cortisol_serum pain MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: cortisol_serum=col(source(s), name("cortisol_serum"))
+  DATA: pain=col(source(s), name("pain"))
+  GUIDE: axis(dim(1), label("cortisol_serum"))
+  GUIDE: axis(dim(2), label("pain"))
+  ELEMENT: point(position(cortisol_serum*pain))
+  ELEMENT: point(position(smooth.loess(cortisol_serum*pain)))
+END GPL.
+
+* Chart Builder (pain & control saliva).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=cortisol_saliva pain MISSING=LISTWISE REPORTMISSING=NO    
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: cortisol_saliva=col(source(s), name("cortisol_saliva"))
+  DATA: pain=col(source(s), name("pain"))
+  GUIDE: axis(dim(1), label("cortisol_saliva"))
+  GUIDE: axis(dim(2), label("pain"))
+  ELEMENT: point(position(cortisol_saliva*pain))
+  ELEMENT: point(position(smooth.loess(cortisol_saliva*pain)))
+END GPL.
+
+*Add higher term of the predictors (one by one).
+*Add higher term for age variable.
+DESCRIPTIVES VARIABLES=age_recode
+  /STATISTICS=MEAN.
+
+COMPUTE age_centered=age_recode - 40.1761.
+EXECUTE.
+
+COMPUTE age_centered_squared=age_centered * age_centered.
+EXECUTE.
+
+REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_centered age_centered_squared sex_recode 
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva 
+  /SCATTERPLOT=(*ZRESID ,*ZPRED) 
+  /RESIDUALS NORMPROB(ZRESID).
+
+*Add higher term for STAI trait variable.
+DESCRIPTIVES VARIABLES=STAI_trait
+  /STATISTICS=MEAN.
+
+COMPUTE STAI_trait_centered=STAI_trait - 40.03.
+EXECUTE.
+
+COMPUTE STAI_trait_centered_squared=STAI_trait_centered * STAI_trait_centered.
+EXECUTE.
+
+REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode 
+  /METHOD=ENTER STAI_trait_centered STAI_trait_centered_squared pain_cat mindfulness cortisol_serum cortisol_saliva 
+  /SCATTERPLOT=(*ZRESID ,*ZPRED) 
+  /RESIDUALS NORMPROB(ZRESID).
+
+*Add higher term for pain catastrophizing variable.
+DESCRIPTIVES VARIABLES=pain_cat
+  /STATISTICS=MEAN.
+
+COMPUTE pain_cat_centered=pain_cat - 30.15.
+EXECUTE.
+
+COMPUTE pain_cat_centered_squared=pain_cat_centered * pain_cat_centered.
+EXECUTE.
+
+REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode 
+  /METHOD=ENTER STAI_trait pain_cat_centered pain_cat_centered_squared mindfulness cortisol_serum cortisol_saliva 
+  /SCATTERPLOT=(*ZRESID ,*ZPRED) 
+  /RESIDUALS NORMPROB(ZRESID).
+
+*Add higher term for mindfulness variable.
+DESCRIPTIVES VARIABLES=mindfulness
+  /STATISTICS=MEAN.
+
+COMPUTE mindfulness_centered=mindfulness - 2.96.
+EXECUTE.
+
+COMPUTE mindfulness_centered_squared=mindfulness_centered * mindfulness_centered.
+EXECUTE.
+
+REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode 
+  /METHOD=ENTER STAI_trait pain_cat mindfulness_centered mindfulness_centered_squared cortisol_serum cortisol_saliva 
+  /SCATTERPLOT=(*ZRESID ,*ZPRED) 
+  /RESIDUALS NORMPROB(ZRESID).
+
+*Add higher term for cortisol serum variable.
+DESCRIPTIVES VARIABLES=cortisol_serum
+  /STATISTICS=MEAN.
+
+COMPUTE cortisol_serum_centered=cortisol_serum - 5.013.
+EXECUTE.
+
+COMPUTE cortisol_serum_centered_squared=cortisol_serum_centered * cortisol_serum_centered.
+EXECUTE.
+
+REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode 
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum_centered cortisol_serum_centered_squared cortisol_saliva 
+  /SCATTERPLOT=(*ZRESID ,*ZPRED) 
+  /RESIDUALS NORMPROB(ZRESID).
+
+*Add higher term for cortisol saliva variable.
+DESCRIPTIVES VARIABLES=cortisol_saliva
+  /STATISTICS=MEAN.
+
+COMPUTE cortisol_saliva_centered=cortisol_saliva - 4.96.
+EXECUTE.
+
+COMPUTE cortisol_saliva_centered_squared=cortisol_saliva_centered * cortisol_saliva_centered.
+EXECUTE.
+
+REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode 
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva_centered cortisol_saliva_centered_squared
+  /SCATTERPLOT=(*ZRESID ,*ZPRED) 
+  /RESIDUALS NORMPROB(ZRESID).
+
+*HOMOSCEDASTICITY ASSUMPTION TESTING.
+COMPUTE sq_residual=RES_1 * RES_1.
+EXECUTE.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT sq_residual
+  /METHOD=ENTER age_recode sex_recode
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva
+
+*NO MULTICOLLINEARITY ASSUMPTION TESTING.
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA COLLIN TOL SELECTION 
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol_serum cortisol_saliva
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID)
+  /SAVE PRED RESID.
+
+*To address the multicollinearity (VIF > 3), I created a new variable "Cortisol" that is the combination of cortisol measurements (serum cortisol & salivary costisol).
+
+COMPUTE Cortisol=MEAN(cortisol_serum,cortisol_saliva).
+EXECUTE.
+
+*I run a regression analysis to check the VIF values once again. 
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) BCOV R ANOVA CHANGE COLLIN TOL SELECTION
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode
+  /METHOD=ENTER STAI_trait pain_cat mindfulness cortisol
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID)
+  /SAVE PRED RESID.
