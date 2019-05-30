@@ -1,0 +1,197 @@
+* Encoding: UTF-8.
+*RQ3.
+* SYNTAX FOR THE DATASET home_assignment_data_3.
+
+*First I need to check the overall variables for error values.
+FREQUENCIES VARIABLES=pain age sex STAI_trait pain_cat mindfulness cortisol_serum 
+    cortisol_saliva
+  /ORDER=ANALYSIS.
+
+DESCRIPTIVES VARIABLES=pain age STAI_trait pain_cat mindfulness cortisol_serum 
+    cortisol_saliva
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+COMPUTE Cortisol=MEAN(cortisol_serum,cortisol_saliva).
+EXECUTE.
+
+*I build the null model.
+
+MIXED pain BY sex WITH age STAI_trait pain_cat mindfulness Cortisol
+  /CRITERIA=CIN(95) MXITER(100) MXSTEP(10) SCORING(1) SINGULAR(0.000000000001) HCONVERGE(0, 
+    ABSOLUTE) LCONVERGE(0, ABSOLUTE) PCONVERGE(0.000001, ABSOLUTE)
+  /FIXED=| SSTYPE(3)
+  /METHOD=REML
+  /PRINT=SOLUTION
+  /RANDOM=INTERCEPT | SUBJECT(hospital) COVTYPE(VC).
+
+*I build the model with fixed effect predictors.
+
+MIXED pain BY sex WITH age STAI_trait pain_cat mindfulness Cortisol
+  /CRITERIA=CIN(95) MXITER(100) MXSTEP(10) SCORING(1) SINGULAR(0.000000000001) HCONVERGE(0, 
+    ABSOLUTE) LCONVERGE(0, ABSOLUTE) PCONVERGE(0.000001, ABSOLUTE)
+  /FIXED=age STAI_trait pain_cat mindfulness Cortisol sex | SSTYPE(3)
+  /METHOD=REML
+  /PRINT=SOLUTION
+  /RANDOM=INTERCEPT | SUBJECT(hospital) COVTYPE(VC)
+  /SAVE=FIXPRED.
+
+*MODEL DIAGNOSTICS.
+*First check the influential outliers.
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=hospital pain MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: hospital=col(source(s), name("hospital"), unit.category())
+  DATA: pain=col(source(s), name("pain"))
+  DATA: id=col(source(s), name("$CASENUM"), unit.category())
+  GUIDE: axis(dim(1), label("hospital"))
+  GUIDE: axis(dim(2), label("pain"))
+  SCALE: linear(dim(2), include(0))
+  ELEMENT: schema(position(bin.quantile.letter(hospital*pain)), label(id))
+END GPL.
+
+*NORMALITY ASSUMPTION TESTING.
+MIXED pain BY sex WITH age STAI_trait pain_cat mindfulness Cortisol
+  /CRITERIA=CIN(95) MXITER(100) MXSTEP(10) SCORING(1) SINGULAR(0.000000000001) HCONVERGE(0, 
+    ABSOLUTE) LCONVERGE(0, ABSOLUTE) PCONVERGE(0.000001, ABSOLUTE)
+  /FIXED=age STAI_trait pain_cat mindfulness Cortisol sex | SSTYPE(3)
+  /METHOD=REML
+  /PRINT=SOLUTION
+  /RANDOM=INTERCEPT | SUBJECT(hospital) COVTYPE(VC)
+  /SAVE=PRED RESID.
+
+EXAMINE VARIABLES=RESID_1
+  /PLOT BOXPLOT STEMLEAF HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+
+*LINEARITY ASSUMPTION TESTING.
+* Chart Builder (residuals & predicted values).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=PRED_1 RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: PRED_1=col(source(s), name("PRED_1"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("Predicted Values"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(PRED_1*RESID_1))
+END GPL.
+
+*We also need to compare the residuals and the fixed predictors separately.
+* Chart Builder (residuals & age).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=age RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: age=col(source(s), name("age"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("age"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(age*RESID_1))
+END GPL.
+
+* Chart Builder (residuals & STAI_Trait).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=STAI_trait RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: STAI_trait=col(source(s), name("STAI_trait"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("STAI_trait"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(STAI_trait*RESID_1))
+END GPL.
+
+* Chart Builder (residuals & pain_cat).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=pain_cat RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: pain_cat=col(source(s), name("pain_cat"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("pain_cat"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(pain_cat*RESID_1))
+END GPL.
+
+* Chart Builder (residuals & mindfulness).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=mindfulness RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: mindfulness=col(source(s), name("mindfulness"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("mindfulness"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(mindfulness*RESID_1))
+END GPL.
+
+* Chart Builder (residuals & cortisol).
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=Cortisol RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: Cortisol=col(source(s), name("Cortisol"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("Cortisol"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(Cortisol*RESID_1))
+END GPL.
+
+*HOMOSCEDASTICITY ASSUMPTION TESTING.
+*First is by viewing the same standardized residuals and the predicted values plot.
+GGRAPH
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=PRED_1 RESID_1 MISSING=LISTWISE REPORTMISSING=NO
+  /GRAPHSPEC SOURCE=INLINE.
+BEGIN GPL
+  SOURCE: s=userSource(id("graphdataset"))
+  DATA: PRED_1=col(source(s), name("PRED_1"))
+  DATA: RESID_1=col(source(s), name("RESID_1"))
+  GUIDE: axis(dim(1), label("Predicted Values"))
+  GUIDE: axis(dim(2), label("Residuals"))
+  ELEMENT: point(position(PRED_1*RESID_1))
+END GPL.
+*Second by check for homoscedasticity across the cluster as well.
+*We need to predict the squared residuals with the clustering variable (Hospital). Hence we need to dummy code the hospital.
+SPSSINC CREATE DUMMIES VARIABLE=hospital 
+ROOTNAME1=hospital_dummy 
+/OPTIONS ORDER=A USEVALUELABELS=YES USEML=YES OMITFIRST=NO.
+
+*We will do the regression with the squared residuals. Hence I created the squared residual variable.
+COMPUTE sq_residuals=RESID_1 * RESID_1.
+EXECUTE.
+
+*Hence I do the regression between the sq_residuals and the dummy variables of the hospital.
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT sq_residuals
+  /METHOD=ENTER hospital_dummy_2 hospital_dummy_3 hospital_dummy_4 hospital_dummy_5 
+    hospital_dummy_6 hospital_dummy_7 hospital_dummy_8 hospital_dummy_9 hospital_dummy_10.
+
+*NO MULTICOLLINEARITY ASSUMPTION TESTING.
+CORRELATIONS
+  /VARIABLES=age STAI_trait pain_cat mindfulness Cortisol
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+  
+*In order to calculate R^2 marginal & conditional, I need find the Vf (fixed effect variance) from the variance of the predicted values, Vr (random effect variance), and Ve (residual variance). 
+
+DESCRIPTIVES VARIABLES=FXPRED_1
+  /STATISTICS=VARIANCE.
+
+* After I got the value of Vf, Vr, and Ve, I continue to the calculation of R^2 marginal [Vf/(Vf+Vr+Ve)] & conditional [(Vf+Vr)/(Vf+Vr+Ve)] in the report.
+* In order to calculate the R^2 value of the linear mixed model, I need to calculate the RSS and TSS in the dataset home_assignment_data_4 --> see Syntax of Home Assignment 3 - Part 2.
