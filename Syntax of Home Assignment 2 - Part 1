@@ -1,0 +1,86 @@
+* Encoding: UTF-8.
+*RQ2.
+*SYNTAX FOR THE DATASET home_assignment_data_1.
+
+RECODE sex ('female'=1) ('male'=0) INTO sex_recode.
+VARIABLE LABELS  sex_recode.
+EXECUTE.
+
+RECODE age (222=22) (ELSE=Copy) INTO age_recode.
+EXECUTE.
+
+RECODE ID ('ID_33'=0) (ELSE=1) INTO excluding_variable.
+EXECUTE.
+
+USE ALL.
+FILTER BY excluding_variable.
+EXECUTE.
+
+*run the data checking for the weight variable.
+
+FREQUENCIES VARIABLES=weight
+  /ORDER=ANALYSIS.
+
+DESCRIPTIVES VARIABLES=weight
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+EXAMINE VARIABLES=weight
+  /PLOT BOXPLOT HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+
+*Regression analysis of the selected predictors before submitted to backward regression. This model referred as "the initial model".
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) R ANOVA SELECTION CHANGE
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode weight STAI_trait pain_cat mindfulness cortisol_serum
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID).
+
+*Backward regression.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=BACKWARD age_recode sex_recode weight STAI_trait pain_cat mindfulness cortisol_serum
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID).
+
+*From the result of backward regression, I do linear regression with age, pain_cat, mindfulness, and cortisol serum. This model referred as "the backward model".
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) R ANOVA SELECTION CHANGE
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode pain_cat mindfulness cortisol_serum
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID).
+
+*The theory-based model (from RQ1).
+
+COMPUTE Cortisol=MEAN(cortisol_serum,cortisol_saliva).
+EXECUTE.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) R ANOVA SELECTION CHANGE
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT pain
+  /METHOD=ENTER age_recode sex_recode STAI_trait pain_cat mindfulness Cortisol
+  /SCATTERPLOT=(*ZRESID ,*ZPRED)
+  /RESIDUALS NORMPROB(ZRESID).
+
+*To compare the RSS of the two models, I continue the calculation in the dataset home_assignment_data_2 --> see Syntax of Home Assignment 2 - Part 2.
