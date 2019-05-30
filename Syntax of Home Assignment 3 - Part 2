@@ -1,0 +1,31 @@
+* Encoding: UTF-8.
+*RQ 3.
+* SYNTAX FOR THE DATASET home_assignment_data_4.
+
+RECODE sex ('female'=1) ('male'=0) INTO sex_recode. 
+EXECUTE. 
+COMPUTE Cortisol=MEAN(cortisol_serum,cortisol_saliva). 
+EXECUTE.
+
+*We need to calculate the total sum of squares, by first measuring the mean of the actual pain values.
+
+DESCRIPTIVES VARIABLES=pain
+  /STATISTICS=MEAN.
+
+*Compute the predictive values of pain.
+
+COMPUTE pred_pain=1.496043 - 0.015655 * age - 0.030892 * STAI_trait + 
+    0.094585 * pain_cat - 0.223107 * mindfulness + 0.634427 * Cortisol - 0.322121 * sex_recode. 
+EXECUTE.
+
+*Compute the RSS and TSS.
+
+COMPUTE RS_SQUARED=(pain-pred_pain)*(pain-pred_pain). 
+EXECUTE. 
+COMPUTE TS_SQUARED=(pain-4.992104)*(pain-4.992104). 
+EXECUTE.
+
+DESCRIPTIVES VARIABLES=RS_SQUARED TS_SQUARED
+  /STATISTICS=SUM.
+
+*I continue the calculation of R^2 value in the report (1-RSS/TSS).
