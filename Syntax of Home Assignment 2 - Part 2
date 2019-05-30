@@ -1,6 +1,7 @@
 * Encoding: UTF-8.
 *RQ2.
-*SYNTAX FOR THE DATASET 2.
+*SYNTAX FOR THE DATASET home_assignment_data_2.
+
 RECODE sex ('female'=1) ('male'=0) INTO sex_recode.
 VARIABLE LABELS  sex_recode.
 EXECUTE.
