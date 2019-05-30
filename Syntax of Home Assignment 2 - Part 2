@@ -1,0 +1,32 @@
+* Encoding: UTF-8.
+*RQ2.
+*SYNTAX FOR THE DATASET 2.
+RECODE sex ('female'=1) ('male'=0) INTO sex_recode.
+VARIABLE LABELS  sex_recode.
+EXECUTE.
+
+*Calculate the predictive pain values from the backward model.
+COMPUTE Prediction_backward=4.019-0.069*age+0.074*pain_cat-0.197*mindfulness+0.408*cortisol_serum.
+EXECUTE.
+
+*Calculate the predictive pain values from the theory-based model.
+COMPUTE Cortisol=MEAN(cortisol_serum,cortisol_saliva).
+EXECUTE.
+
+COMPUTE Prediction_theorybased=3.196-0.055*age-0.262*sex_recode-0.007*STAI_trait+0.081*pain_cat-0.181*mindfulness+0.499*cortisol.
+EXECUTE.
+
+*Calculate the residual squares from backward model.
+
+COMPUTE Sq_Residual_backward=(pain - Prediction_backward)*(pain - Prediction_backward).
+EXECUTE.
+
+*Calculate the residual squares from the theory-based model.
+
+COMPUTE Sq_Residual_theorybased=(pain - Prediction_theorybased)*(pain - Prediction_theorybased).
+EXECUTE.
+
+*Check the descriptive statistics to look at the comparison between the residual sum of squares (RSS).
+
+DESCRIPTIVES VARIABLES=Sq_Residual_backward Sq_Residual_theorybased
+  /STATISTICS=MEAN SUM MIN MAX.
