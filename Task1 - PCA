@@ -1,0 +1,282 @@
+*Task1 - PCA.
+*Syntax for Dataset "School Data".
+
+DESCRIPTIVES VARIABLES=Q4_1 Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12 Q4_13 Q4_14 
+    Q4_15 Q5_1 Q5_2 Q5_3 Q5_4 Q5_5 Q5_6 Q5_7 Q5_8 Q46 Q47_1
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+RECODE Q4_1 Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12 Q4_13 Q4_14 Q4_15 Q5_1 Q5_2 
+    Q5_3 Q5_4 Q5_5 Q5_6 Q5_7 Q5_8 Q46 Q47_1 Q4_12 Q4_14 Q5_1 Q5_2 
+    Q5_3 Q5_6 Q5_7 (0=SYSMIS).
+EXECUTE.
+
+*I recode those variables that measure negative responses.
+
+RECODE Q4_12 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q4_12_recoded.
+VARIABLE LABELS  Q4_12_recoded 'In my school students mostly hang out with students from a similar cultural background'.
+EXECUTE.
+
+RECODE Q4_14 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q4_14_recoded.
+VARIABLE LABELS  Q4_14_recoded 'In my school students with a "Swedish" background fit better into the school activities'.
+EXECUTE.
+
+RECODE Q5_1 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q5_1_recoded.
+VARIABLE LABELS  Q5_1_recoded 'In my class, few students take their studies seriously'.
+EXECUTE.
+
+RECODE Q5_2 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q5_2_recoded.
+VARIABLE LABELS  Q5_2_recoded 'In my class, many skip school/cut class'.
+EXECUTE.
+
+RECODE Q5_3 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q5_3_recoded.
+VARIABLE LABELS  Q5_3_recoded 'In my class, most students think that school is boring'.
+EXECUTE.
+
+RECODE Q5_6 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q5_6_recoded.
+VARIABLE LABELS  Q5_6_recoded 'In my class, there is a lot of competition between the students'.
+EXECUTE.
+
+RECODE Q5_7 (4=1) (3=2) (2=3) (1=4) (MISSING=SYSMIS) INTO Q5_7_recoded.
+VARIABLE LABELS  Q5_7_recoded 'In my class, some students are treated better than others'.
+EXECUTE.
+
+*First factor extraction of the school level observations.
+
+FACTOR
+  /VARIABLES Q4_1 Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /MISSING LISTWISE 
+  /ANALYSIS Q4_1 Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /METHOD=CORRELATION.
+
+*First factor extraction of the class level observations.
+
+FACTOR
+  /VARIABLES Q5_1_recoded Q5_2_recoded Q5_3_recoded Q5_4 Q5_5 Q5_6_recoded Q5_7_recoded Q5_8 
+  /MISSING LISTWISE 
+  /ANALYSIS Q5_1_recoded Q5_2_recoded Q5_3_recoded Q5_4 Q5_5 Q5_6_recoded Q5_7_recoded Q5_8 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /SAVE REG(ALL)
+  /METHOD=CORRELATION.
+
+*Second factor extraction of the school level observations: solution by excluding one observation of “In my school students are expected to study hard”.
+
+FACTOR
+  /VARIABLES Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /MISSING LISTWISE 
+  /ANALYSIS Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /METHOD=CORRELATION.
+
+*Third factor extraction of the school level observations: solution by excluding one observation of “In my school we have a calm and safe study environment”.
+
+FACTOR
+  /VARIABLES Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /MISSING LISTWISE 
+  /ANALYSIS Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /METHOD=CORRELATION.
+
+*Fourth factor extraction of the school level observations: solution by excluding one observation of “In my school the students say they are going to a good school”.
+
+FACTOR
+  /VARIABLES Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /MISSING LISTWISE 
+  /ANALYSIS Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded Q4_15 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /METHOD=CORRELATION.
+
+*Fifth factor extraction of the school level observations: solution by excluding one observation of “In my school it's ok to be a little different””.
+
+FACTOR
+  /VARIABLES Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded 
+  /MISSING LISTWISE 
+  /ANALYSIS Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_10 Q4_11 Q4_12_recoded Q4_13 Q4_14_recoded 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /METHOD=CORRELATION.
+
+*Sixth factor extraction of the school level observations: solution by excluding one observation of “In my school all are equal (‎/worth the same)”.
+
+FACTOR
+  /VARIABLES Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_10 Q4_11 Q4_12_recoded Q4_14_recoded 
+  /MISSING LISTWISE 
+  /ANALYSIS Q4_2 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_10 Q4_11 Q4_12_recoded Q4_14_recoded 
+  /PRINT INITIAL CORRELATION KMO AIC EXTRACTION ROTATION FSCORE
+  /FORMAT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /SAVE REG(ALL)
+  /METHOD=CORRELATION.
+
+*Reliability tests for all factors.
+*index1_school.
+RELIABILITY
+  /VARIABLES=Q4_5 Q4_6 Q4_8 Q4_10 Q4_11
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /SUMMARY=CORR.
+
+*index2_school.
+RELIABILITY
+  /VARIABLES=Q4_12_recoded Q4_14_recoded
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /SUMMARY=CORR.
+
+*index3_school.
+RELIABILITY
+  /VARIABLES=Q4_2 Q4_4 Q4_7
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /SUMMARY=CORR.
+
+*index1_class.
+RELIABILITY
+  /VARIABLES=Q5_1_recoded Q5_2_recoded Q5_3_recoded
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /SUMMARY=CORR.
+
+*index2_class.
+RELIABILITY
+  /VARIABLES=Q5_4 Q5_5 Q5_8
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /SUMMARY=CORR.
+
+*index3_class.
+RELIABILITY
+  /VARIABLES=Q5_6_recoded Q5_7_recoded
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /SUMMARY=CORR.
+
+*Computing indexes.
+*index1_school.
+COMPUTE index1_school=(Q4_5 + Q4_6 + Q4_8 + Q4_10 + Q4_11)/5.
+EXECUTE.
+
+*index3_school.
+COMPUTE index3_school=(Q4_2 + Q4_4 + Q4_7)/3.
+EXECUTE.
+
+*index1_class.
+COMPUTE index1_class=(Q5_1_recoded + Q5_2_recoded + Q5_3_recoded) / 3.
+EXECUTE.
+
+*index2_class.
+COMPUTE index2_class=(Q5_4 + Q5_5 + Q5_8)/3.
+EXECUTE.
+
+*Correlation between factors and indexes.
+
+CORRELATIONS
+  /VARIABLES=FAC1_school index1_school
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+CORRELATIONS
+  /VARIABLES=FAC3_school index3_school
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+CORRELATIONS
+  /VARIABLES=FAC1_class index1_class
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+CORRELATIONS
+  /VARIABLES=FAC2_class index2_class
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+*Regression between the indexes (DV) and the gender and born in Sweden (IV).
+
+RECODE Q46 (2=0) (1=1) (MISSING=SYSMIS) INTO gender_recode.
+VARIABLE LABELS  gender_recode 'Gender'.
+EXECUTE.
+
+RECODE Q47_1 (2=0) (1=1) (MISSING=SYSMIS) INTO born_in_sweden_recode.
+VARIABLE LABELS  born_in_sweden_recode 'Born in Sweden'.
+EXECUTE.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT FAC1_school
+  /METHOD=ENTER gender_recode born_in_sweden_recode.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT FAC3_school
+  /METHOD=ENTER gender_recode born_in_sweden_recode.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT FAC1_class
+  /METHOD=ENTER gender_recode born_in_sweden_recode.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT FAC2_class
+  /METHOD=ENTER gender_recode born_in_sweden_recode.
+
+*confirmation regression analysis with an index.
+
+REGRESSION
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS R ANOVA
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT index1_class
+  /METHOD=ENTER gender_recode born_in_sweden_recode.
