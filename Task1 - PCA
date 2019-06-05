@@ -1,5 +1,5 @@
 *Task1 - PCA.
-*Syntax for Dataset "School Data".
+*Syntax for Dataset "School-Data".
 
 DESCRIPTIVES VARIABLES=Q4_1 Q4_2 Q4_3 Q4_4 Q4_5 Q4_6 Q4_7 Q4_8 Q4_9 Q4_10 Q4_11 Q4_12 Q4_13 Q4_14 
     Q4_15 Q5_1 Q5_2 Q5_3 Q5_4 Q5_5 Q5_6 Q5_7 Q5_8 Q46 Q47_1
