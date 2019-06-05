@@ -210,22 +210,22 @@ EXECUTE.
 *Correlation between factors and indexes.
 
 CORRELATIONS
-  /VARIABLES=FAC1_school index1_school
+  /VARIABLES=FAC1_1 index1_school
   /PRINT=TWOTAIL NOSIG
   /MISSING=PAIRWISE.
 
 CORRELATIONS
-  /VARIABLES=FAC3_school index3_school
+  /VARIABLES=FAC3_1 index3_school
   /PRINT=TWOTAIL NOSIG
   /MISSING=PAIRWISE.
 
 CORRELATIONS
-  /VARIABLES=FAC1_class index1_class
+  /VARIABLES=FAC1_2 index1_class
   /PRINT=TWOTAIL NOSIG
   /MISSING=PAIRWISE.
 
 CORRELATIONS
-  /VARIABLES=FAC2_class index2_class
+  /VARIABLES=FAC2_2 index2_class
   /PRINT=TWOTAIL NOSIG
   /MISSING=PAIRWISE.
 
@@ -244,7 +244,7 @@ REGRESSION
   /STATISTICS COEFF OUTS R ANOVA
   /CRITERIA=PIN(.05) POUT(.10)
   /NOORIGIN 
-  /DEPENDENT FAC1_school
+  /DEPENDENT FAC1_1
   /METHOD=ENTER gender_recode born_in_sweden_recode.
 
 REGRESSION
@@ -252,7 +252,7 @@ REGRESSION
   /STATISTICS COEFF OUTS R ANOVA
   /CRITERIA=PIN(.05) POUT(.10)
   /NOORIGIN 
-  /DEPENDENT FAC3_school
+  /DEPENDENT FAC3_1
   /METHOD=ENTER gender_recode born_in_sweden_recode.
 
 REGRESSION
@@ -260,7 +260,7 @@ REGRESSION
   /STATISTICS COEFF OUTS R ANOVA
   /CRITERIA=PIN(.05) POUT(.10)
   /NOORIGIN 
-  /DEPENDENT FAC1_class
+  /DEPENDENT FAC1_2
   /METHOD=ENTER gender_recode born_in_sweden_recode.
 
 REGRESSION
@@ -268,7 +268,7 @@ REGRESSION
   /STATISTICS COEFF OUTS R ANOVA
   /CRITERIA=PIN(.05) POUT(.10)
   /NOORIGIN 
-  /DEPENDENT FAC2_class
+  /DEPENDENT FAC2_2
   /METHOD=ENTER gender_recode born_in_sweden_recode.
 
 *confirmation regression analysis with an index.
@@ -279,4 +279,4 @@ REGRESSION
   /CRITERIA=PIN(.05) POUT(.10)
   /NOORIGIN 
   /DEPENDENT index1_class
-  /METHOD=ENTER gender_recode born_in_sweden_recode.
+/METHOD=ENTER gender_recode born_in_sweden_recode.
